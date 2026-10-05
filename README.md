@@ -29,6 +29,38 @@ No Go installed? Use Docker:
 docker run --rm -it --init -p 8080:8080 -v "$PWD":/src -w /src golang:1 go run .
 ```
 
+## Deploy with Docker
+
+The `Dockerfile` builds a ~10 MB image: a static binary on `scratch`, running
+as an unprivileged user. It builds natively on amd64 and arm64.
+
+```sh
+docker build -t battleship .
+docker run -d --restart unless-stopped -p 8080:8080 --name battleship battleship
+```
+
+Or with Docker Compose, building straight from this repository:
+
+```yaml
+services:
+  battleship:
+    build: https://github.com/sacoco/battleship.git#main
+    restart: unless-stopped
+    read_only: true
+    ports:
+      - "8080:8080"
+```
+
+To update, rebuild and restart: `docker compose build --pull && docker compose up -d`.
+
+Notes for running it on the internet:
+
+- Put it behind any HTTPS reverse proxy or tunnel. The proxy must forward
+  WebSocket upgrades on `/ws` and keep the original `Host` header: the server
+  only accepts WebSocket connections from its own origin.
+- All game state lives in memory. Restarting the container ends every match
+  in progress; there is nothing to back up.
+
 ## Test
 
 ```sh
@@ -120,3 +152,7 @@ Deliberately left out to keep the core small:
 - Accounts, rankings, chat, matchmaking, spectators.
 - Turn timer.
 - Persistence: a server restart ends all games.
+
+## License
+
+[MIT](LICENSE) © Santiago Correa (sacoco)
