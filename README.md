@@ -26,7 +26,7 @@ the lobby list. Set `PORT` to listen elsewhere.
 No Go installed? Use Docker:
 
 ```sh
-docker run --rm -p 8080:8080 -v "$PWD":/src -w /src golang:1 go run .
+docker run --rm -it --init -p 8080:8080 -v "$PWD":/src -w /src golang:1 go run .
 ```
 
 ## Test
