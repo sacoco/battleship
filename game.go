@@ -5,8 +5,20 @@ import "errors"
 // Size is the width and height of a board.
 const Size = 10
 
-// Fleet lists the ship lengths each player must place.
-var Fleet = []int{5, 4, 3, 3, 2}
+// ShipType is a class of ship and how many cells it covers.
+type ShipType struct {
+	Type string `json:"type"`
+	Len  int    `json:"len"`
+}
+
+// Fleet lists the ships each player must place, one of each.
+var Fleet = []ShipType{
+	{"carrier", 5},
+	{"battleship", 4},
+	{"frigate", 3},
+	{"submarine", 3},
+	{"patrol", 2},
+}
 
 // Error messages double as codes the client translates.
 var (
@@ -16,10 +28,11 @@ var (
 )
 
 type Ship struct {
-	X        int  `json:"x"`
-	Y        int  `json:"y"`
-	Len      int  `json:"len"`
-	Vertical bool `json:"vertical"`
+	Type     string `json:"type"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	Len      int    `json:"len"`
+	Vertical bool   `json:"vertical"`
 }
 
 func (s Ship) cells() [][2]int {
@@ -41,20 +54,25 @@ type Board struct {
 	shots [Size][Size]bool
 }
 
-// NewBoard validates a placement: exactly the Fleet, in bounds, no overlaps.
+// NewBoard validates a placement: each Fleet type exactly once, in bounds, no
+// overlaps. Lengths come from the ship type, not from the client.
 func NewBoard(ships []Ship) (*Board, error) {
 	if len(ships) != len(Fleet) {
 		return nil, ErrInvalidFleet
 	}
-	want := map[int]int{}
-	for _, l := range Fleet {
-		want[l]++
+	lens := map[string]int{}
+	for _, t := range Fleet {
+		lens[t.Type] = t.Len
 	}
-	b := &Board{ships: ships}
+	b := &Board{ships: make([]Ship, len(ships))}
 	for i, s := range ships {
-		if want[s.Len]--; want[s.Len] < 0 {
+		l, ok := lens[s.Type]
+		if !ok {
 			return nil, ErrInvalidFleet
 		}
+		delete(lens, s.Type)
+		s.Len = l
+		b.ships[i] = s
 		for _, c := range s.cells() {
 			if !inBounds(c[0], c[1]) || b.owner[c[0]][c[1]] != 0 {
 				return nil, ErrInvalidFleet

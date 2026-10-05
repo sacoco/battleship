@@ -4,58 +4,159 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Battleship</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Share+Tech+Mono&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1 data-i18n="title"></h1>
-    <select id="lang" aria-label="Language">
-      <option value="en">English</option>
-      <option value="es">Español</option>
-    </select>
+  <header class="topbar">
+    <div class="brand">
+      <span class="emblem" aria-hidden="true">⚓</span>
+      <div>
+        <h1 data-i18n="title"></h1>
+        <p class="sub" data-i18n="subtitle"></p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="commander" class="commander" hidden>
+        <span data-i18n="commander"></span> <strong id="my-name"></strong>
+      </span>
+      <select id="lang" aria-label="Language">
+        <option value="en">EN</option>
+        <option value="es">ES</option>
+      </select>
+    </div>
   </header>
+  <div class="hazard" aria-hidden="true"></div>
 
   <main>
-    <p id="status" role="status"></p>
-    <p id="notice" role="alert"></p>
-
-    <section id="lobby">
-      <button id="create" data-i18n="create"></button>
-      <form id="join-form">
-        <input id="code" maxlength="4" autocomplete="off" required data-i18n-placeholder="codePlaceholder">
-        <button data-i18n="join"></button>
+    <!-- Call sign -->
+    <section id="screen-name" class="screen" hidden>
+      <form id="name-form" class="panel enlist">
+        <h2 data-i18n="enlistTitle"></h2>
+        <p class="hint" data-i18n="enlistHint"></p>
+        <input id="name-input" maxlength="16" required autocomplete="nickname" data-i18n-placeholder="namePlaceholder">
+        <button class="primary" data-i18n="enlist"></button>
       </form>
     </section>
 
-    <section id="waiting" hidden>
-      <p class="code" id="room-code"></p>
-      <button id="copy-link" data-i18n="copyLink"></button>
+    <!-- Lobby -->
+    <section id="screen-lobby" class="screen" hidden>
+      <div class="panel lobby-actions">
+        <button id="create" class="primary" data-i18n="newGame"></button>
+        <form id="join-form">
+          <input id="code-input" maxlength="4" required autocomplete="off" data-i18n-placeholder="codePlaceholder">
+          <button data-i18n="join"></button>
+        </form>
+        <button id="rename" class="ghost" data-i18n="changeName"></button>
+      </div>
+      <div class="panel">
+        <h2 data-i18n="openGames"></h2>
+        <div class="table-scroll">
+          <table class="games">
+            <thead>
+              <tr>
+                <th data-i18n="colCode"></th>
+                <th data-i18n="colHost"></th>
+                <th data-i18n="colGuest"></th>
+                <th data-i18n="colStatus"></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="games-body"></tbody>
+          </table>
+        </div>
+        <p id="no-games" class="empty" data-i18n="noGames"></p>
+      </div>
     </section>
 
-    <section id="game" hidden>
-      <div id="place-controls">
-        <button id="rotate" data-i18n="rotate"></button>
-        <button id="reset" data-i18n="reset"></button>
-        <button id="ready" data-i18n="ready" disabled></button>
+    <!-- Match -->
+    <section id="screen-room" class="screen" hidden>
+      <div class="hud panel">
+        <div class="side">
+          <span id="light-me" class="light"></span>
+          <div><span class="label" data-i18n="you"></span><strong id="hud-me"></strong></div>
+        </div>
+        <p id="status" role="status"></p>
+        <div class="side right">
+          <div><span class="label" data-i18n="enemy"></span><strong id="hud-them"></strong></div>
+          <span id="light-them" class="light"></span>
+        </div>
       </div>
-      <div class="boards">
-        <figure>
-          <figcaption data-i18n="yourFleet"></figcaption>
-          <div id="own-board" class="board"></div>
-        </figure>
-        <figure id="enemy" hidden>
-          <figcaption data-i18n="enemyWaters"></figcaption>
-          <div id="enemy-board" class="board"></div>
-        </figure>
-      </div>
-    </section>
 
-    <section id="over" hidden>
-      <button id="again" data-i18n="playAgain"></button>
+      <div id="waiting-panel" class="panel waiting">
+        <p data-i18n="shareCode"></p>
+        <p id="room-code" class="code"></p>
+        <div class="row">
+          <button id="copy-link" class="primary" data-i18n="copyLink"></button>
+          <button id="abort" data-i18n="cancel"></button>
+        </div>
+      </div>
+
+      <div id="theater" class="theater">
+        <div class="col">
+          <h3 data-i18n="yourFleet"></h3>
+          <div id="own-board"></div>
+          <ul id="own-fleet" class="fleet"></ul>
+        </div>
+
+        <div id="deploy-col" class="col">
+          <h3 data-i18n="deploy"></h3>
+          <p class="hint" data-i18n="placeHint"></p>
+          <ul id="picker" class="fleet picker"></ul>
+          <div class="row">
+            <button id="rotate" data-i18n="rotate"></button>
+            <button id="random" data-i18n="random"></button>
+            <button id="clear" data-i18n="reset"></button>
+          </div>
+          <button id="ready" class="primary wide" data-i18n="ready"></button>
+          <p id="enemy-ready" class="hint ok" data-i18n="opponentReady" hidden></p>
+        </div>
+
+        <div id="enemy-col" class="col">
+          <h3 data-i18n="enemyWaters"></h3>
+          <div id="enemy-board"></div>
+          <p id="target" class="target"></p>
+          <ul id="enemy-fleet" class="fleet"></ul>
+        </div>
+
+        <aside class="col intel">
+          <div class="panel">
+            <h3 data-i18n="stats"></h3>
+            <table id="stats" class="stats"></table>
+          </div>
+          <div class="panel">
+            <h3 data-i18n="log"></h3>
+            <ol id="log" class="log"></ol>
+          </div>
+          <button id="withdraw" class="ghost danger" data-i18n="withdraw"></button>
+        </aside>
+      </div>
     </section>
   </main>
 
+  <div id="debrief" class="overlay" hidden>
+    <div class="panel dialog">
+      <h2 id="debrief-title"></h2>
+      <p id="debrief-text"></p>
+      <table id="debrief-stats" class="stats"></table>
+      <button id="back" class="primary wide" data-i18n="backToLobby"></button>
+    </div>
+  </div>
+
+  <div id="conn-lost" class="overlay" hidden>
+    <div class="panel dialog">
+      <h2 data-i18n="disconnected"></h2>
+      <p data-i18n="disconnectedText"></p>
+      <button id="reconnect" class="primary wide" data-i18n="reconnect"></button>
+    </div>
+  </div>
+
+  <div id="toast" role="alert"></div>
+
   <script src="i18n.js"></script>
+  <script src="sprites.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
