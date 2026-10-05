@@ -5,6 +5,17 @@ const LETTERS = 'ABCDEFGHIJ';
 const $ = id => document.getElementById(id);
 const coord = (x, y) => LETTERS[y] + (x + 1);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const buzz = pattern => navigator.vibrate?.(pattern);
+
+// Touch has no hover, so on touch a first tap previews (placement) or aims
+// (battle) and a second tap on the same cell confirms. Tracked per pointer, so
+// laptops with touchscreens get whichever the user is actually using.
+let pointerType = 'mouse';
+document.addEventListener('pointerdown', e => {
+  pointerType = e.pointerType;
+  document.body.classList.toggle('touch', pointerType === 'touch');
+}, true);
+const isTouch = () => pointerType === 'touch';
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -40,6 +51,7 @@ function newRoom(code) {
     opponentReady: false,
     myTurn: false,
     pending: null, // "x,y" fired at, awaiting the result
+    aim: null, // "x,y" selected on touch, waiting for confirmation
     incoming: new Map(), // "x,y" -> hit, shots at our fleet
     outgoing: new Map(), // "x,y" -> hit, our shots
     enemySunk: [],
@@ -106,7 +118,9 @@ function handle(m) {
         room.phase = 'battle';
         addLog(m.yours ? 'log.youFirst' : 'log.theyFirst', { name: room.opponent });
       }
+      if (m.yours && !room.myTurn) buzz([30, 60, 30]);
       room.myTurn = m.yours;
+      room.aim = null;
       renderRoom();
       break;
     case 'shot':
@@ -204,7 +218,7 @@ function makeBoard(wrap, onClick, onHover) {
       c.type = 'button';
       c.setAttribute('aria-label', coord(x, y));
       c.addEventListener('click', () => onClick(x, y));
-      c.addEventListener('pointerenter', () => onHover(x, y));
+      c.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch') onHover(x, y); });
       board.append(c);
       cells.push(c);
     }
@@ -212,7 +226,7 @@ function makeBoard(wrap, onClick, onHover) {
   const ships = el('div', 'layer ships');
   const fx = el('div', 'layer fx');
   board.append(ships, fx);
-  board.addEventListener('pointerleave', () => onHover(-1, -1));
+  board.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') onHover(-1, -1); });
   wrap.append(board);
   return { board, cells, ships, fx };
 }
@@ -241,7 +255,7 @@ function shipEl(s, cls = '') {
   return d;
 }
 
-function paint(b, shots, pending) {
+function paint(b, shots, pending, aim) {
   b.cells.forEach((c, i) => {
     const key = `${i % SIZE},${Math.floor(i / SIZE)}`;
     const hit = shots.get(key);
@@ -249,18 +263,22 @@ function paint(b, shots, pending) {
     c.classList.toggle('hit', hit === true);
     c.classList.toggle('miss', hit === false);
     c.classList.toggle('locked', key === pending);
+    c.classList.toggle('aimed', key === aim);
   });
 }
 
 function renderBoards() {
   const r = room;
   paint(own, r.incoming);
-  paint(enemy, r.outgoing, r.pending);
+  paint(enemy, r.outgoing, r.pending, r.aim);
   own.ships.replaceChildren(...r.ships.map(s => shipEl(s, r.ownSunk.has(s.type) ? 'sunk' : '')));
   enemy.ships.replaceChildren(...r.enemySunk.map(s => shipEl(s, 'sunk')));
-  enemy.board.classList.toggle('armed', r.phase === 'battle' && r.myTurn && !r.pending);
+  const armed = r.phase === 'battle' && r.myTurn && !r.pending;
+  enemy.board.classList.toggle('armed', armed);
+  enemy.board.classList.toggle('idle', r.phase === 'battle' && !r.myTurn);
   own.board.classList.toggle('placing', r.phase === 'placing');
   ownHover(...hover);
+  renderTarget();
 }
 
 // ---------- deployment ----------
@@ -287,13 +305,20 @@ function ownClick(x, y) {
   if (r?.phase !== 'placing') return;
   const i = r.ships.findIndex(s => cellsOf(s).some(([a, b]) => a === x && b === y));
   if (i >= 0) {
+    const s = r.ships[i];
     pickUp(i);
+    if (isTouch()) hover = [s.x, s.y]; // keep it previewed where it was
   } else {
     if (!r.selected) return;
+    if (isTouch() && (hover[0] !== x || hover[1] !== y)) {
+      ownHover(x, y);
+      return;
+    }
     const s = candidate(x, y);
     if (!fits(s, r.ships)) return;
     r.ships.push(s);
     r.selected = r.fleet.find(f => !r.ships.some(s => s.type === f.type))?.type ?? null;
+    if (isTouch()) hover = [-1, -1];
   }
   renderRoom();
 }
@@ -350,19 +375,49 @@ function renderDeploy() {
 
 // ---------- battle ----------
 
+let enemyHoverCell = null;
+
 function enemyHover(x, y) {
+  enemyHoverCell = x >= 0 ? `${x},${y}` : null;
+  crosshair(x, y);
+  renderTarget();
+}
+
+function crosshair(x, y) {
   enemy.board.classList.toggle('aiming', x >= 0);
   enemy.board.style.setProperty('--hx', x);
   enemy.board.style.setProperty('--hy', y);
-  const armed = enemy.board.classList.contains('armed');
-  $('target').textContent = armed && x >= 0 ? `${t('target')}: ${coord(x, y)}` : '';
+}
+
+function renderTarget() {
+  const r = room;
+  const armed = r?.phase === 'battle' && r.myTurn && !r.pending;
+  const key = r?.aim ?? enemyHoverCell;
+  const [x, y] = key ? key.split(',').map(Number) : [];
+  $('target').textContent = armed && key ? `${t('target')}: ${coord(x, y)}` : armed ? t('pickTarget') : '';
+  $('fire').disabled = !(armed && r.aim);
 }
 
 function enemyClick(x, y) {
   const r = room;
   const key = `${x},${y}`;
   if (r?.phase !== 'battle' || !r.myTurn || r.pending || r.outgoing.has(key)) return;
+  if (isTouch() && r.aim !== key) {
+    r.aim = key;
+    crosshair(x, y);
+    buzz(10);
+    renderBoards();
+    return;
+  }
+  fire(key);
+}
+
+function fire(key) {
+  const r = room;
+  const [x, y] = key.split(',').map(Number);
   r.pending = key;
+  r.aim = null;
+  crosshair(-1, -1);
   send({ type: 'fire', x, y });
   renderBoards();
 }
@@ -376,6 +431,12 @@ function onShot(m) {
   strike(mine ? enemy : own, m.x, m.y, m.hit, () => {
     if (room !== r) return;
     (mine ? r.outgoing : r.incoming).set(`${m.x},${m.y}`, m.hit);
+    if (!mine && m.hit) {
+      buzz(m.sunk ? [120, 60, 200] : 120);
+      document.body.classList.remove('hit-flash');
+      void document.body.offsetWidth;
+      document.body.classList.add('hit-flash');
+    }
     const st = mine ? r.stats.me : r.stats.them;
     st.shots++;
     if (m.hit) st.hits++;
@@ -514,6 +575,7 @@ function renderRoom() {
   const deploying = r.phase === 'placing' || r.phase === 'ready';
   $('waiting-panel').hidden = r.phase !== 'waiting';
   $('theater').hidden = r.phase === 'waiting';
+  $('theater').classList.toggle('battle', r.phase === 'battle' || r.phase === 'over');
   $('deploy-col').hidden = !deploying;
   $('enemy-col').hidden = deploying;
   $('withdraw').hidden = r.phase === 'over';
@@ -561,6 +623,7 @@ $('clear').addEventListener('click', () => {
   renderRoom();
 });
 $('ready').addEventListener('click', () => send({ type: 'place', ships: room.ships }));
+$('fire').addEventListener('click', () => { if (room?.aim) fire(room.aim); });
 own.board.addEventListener('contextmenu', e => {
   if (room?.phase !== 'placing') return;
   e.preventDefault();

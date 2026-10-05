@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d09">
   <title>Battleship</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,7 +96,7 @@
       </div>
 
       <div id="theater" class="theater">
-        <div class="col">
+        <div id="own-col" class="col">
           <h3 data-i18n="yourFleet"></h3>
           <div id="own-board"></div>
           <ul id="own-fleet" class="fleet"></ul>
@@ -103,21 +104,27 @@
 
         <div id="deploy-col" class="col">
           <h3 data-i18n="deploy"></h3>
-          <p class="hint" data-i18n="placeHint"></p>
+          <p class="hint no-touch" data-i18n="placeHint"></p>
+          <p class="hint only-touch" data-i18n="placeHintTouch"></p>
           <ul id="picker" class="fleet picker"></ul>
-          <div class="row">
-            <button id="rotate" data-i18n="rotate"></button>
-            <button id="random" data-i18n="random"></button>
-            <button id="clear" data-i18n="reset"></button>
+          <div class="deploy-actions">
+            <div class="row">
+              <button id="rotate" data-i18n="rotate"></button>
+              <button id="random" data-i18n="random"></button>
+              <button id="clear" data-i18n="reset"></button>
+            </div>
+            <button id="ready" class="primary wide" data-i18n="ready"></button>
           </div>
-          <button id="ready" class="primary wide" data-i18n="ready"></button>
           <p id="enemy-ready" class="hint ok" data-i18n="opponentReady" hidden></p>
         </div>
 
         <div id="enemy-col" class="col">
           <h3 data-i18n="enemyWaters"></h3>
           <div id="enemy-board"></div>
-          <p id="target" class="target"></p>
+          <div class="fire-bar">
+            <p id="target" class="target"></p>
+            <button id="fire" class="primary" data-i18n="fire"></button>
+          </div>
           <ul id="enemy-fleet" class="fleet"></ul>
         </div>
 

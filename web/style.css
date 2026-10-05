@@ -82,6 +82,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 16px; }
 /* ---------- controls ---------- */
 
 button, input, select { font: inherit; font-family: var(--mono); }
+button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button {
   padding: 0.6em 1.1em;
   color: var(--amber);
@@ -172,16 +173,12 @@ table.games { width: 100%; border-collapse: collapse; }
   .intel { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   #withdraw { grid-column: 1 / -1; justify-self: start; }
 }
-@media (max-width: 760px) {
-  .theater, .intel { grid-template-columns: 1fr; }
-  .hud { grid-template-columns: 1fr 1fr; }
-  #status { grid-column: 1 / -1; grid-row: 2; }
-}
 
 /* ---------- boards ---------- */
 
 .board-wrap {
-  --cell: clamp(24px, calc((100vw - 56px) / 11), 34px);
+  /* fits the viewport height too, for landscape phones and short windows */
+  --cell: clamp(18px, min(calc((100vw - 56px) / 11), calc((100vh - 170px) / 11)), 34px);
   display: grid;
   grid-template-columns: 1.5em repeat(10, var(--cell));
   grid-template-rows: 1.5em repeat(10, var(--cell));
@@ -198,9 +195,17 @@ table.games { width: 100%; border-collapse: collapse; }
   background-image: repeating-linear-gradient(0deg, transparent 0 6px, rgba(255, 255, 255, 0.02) 6px 7px);
   border: 1px solid var(--line-2);
   box-shadow: 0 0 0 3px #000, inset 0 0 30px rgba(23, 64, 75, 0.6);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: opacity 0.3s, box-shadow 0.3s;
 }
+/* whose turn it is, readable at a glance */
+.board.armed { box-shadow: 0 0 0 3px #000, 0 0 0 5px rgba(127, 211, 138, 0.55), 0 0 22px rgba(127, 211, 138, 0.25), inset 0 0 30px rgba(23, 64, 75, 0.6); }
+.board.idle { opacity: 0.7; }
 .cell {
   position: relative;
+  min-height: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -246,6 +251,7 @@ table.games { width: 100%; border-collapse: collapse; }
     linear-gradient(to bottom, transparent calc(var(--hy) * 10%), var(--band) 0 calc(var(--hy) * 10% + 10%), transparent 0);
 }
 .board.armed .cell:not(.shot):hover::before,
+.board.armed .cell.aimed::before,
 .cell.locked::before {
   content: '';
   position: absolute;
@@ -268,7 +274,26 @@ table.games { width: 100%; border-collapse: collapse; }
 @keyframes pulse { to { inset: 14%; } }
 @keyframes blink { 50% { opacity: 0.2; } }
 
-.target { min-height: 1.4em; margin: 8px 0 0; color: var(--amber); font-size: 0.85rem; letter-spacing: 0.1em; }
+.fire-bar { display: flex; align-items: center; gap: 12px; margin-top: 8px; min-height: 2.4em; }
+.target { flex: 1; margin: 0; color: var(--amber); font-size: 0.85rem; letter-spacing: 0.1em; }
+#fire { display: none; }
+body.touch #fire { display: block; min-width: 7em; }
+
+.only-touch { display: none; }
+body.touch .only-touch { display: block; }
+body.touch .no-touch { display: none; }
+
+/* red vignette when our fleet takes a hit */
+body.hit-flash::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  box-shadow: inset 0 0 80px 10px rgba(226, 72, 44, 0.55);
+  animation: flash 0.6s ease-out forwards;
+}
+@keyframes flash { to { opacity: 0; } }
 
 /* missile and impacts */
 .missile, .blast, .splash { position: absolute; }
@@ -405,6 +430,116 @@ table.games { width: 100%; border-collapse: collapse; }
   transition: transform 0.25s, opacity 0.25s, visibility 0.25s;
 }
 #toast.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+
+/* ---------- phones ---------- */
+
+@media (max-width: 760px) {
+  body { font-size: 15px; }
+  .topbar { padding: 8px 16px; }
+  .emblem { width: 34px; height: 34px; font-size: 1.1rem; }
+  h1 { font-size: 1.15rem; white-space: nowrap; }
+  .sub { display: none; }
+  .brand { gap: 8px; min-width: 0; }
+  .commander { font-size: 0.8rem; }
+  main { padding: 12px 16px calc(96px + env(safe-area-inset-bottom)); }
+  button { min-height: 44px; }
+  button.small { min-height: 38px; }
+
+  /* lobby: actions full width, games as cards */
+  .lobby-actions > * { flex: 1 1 100%; }
+  #join-form input { flex: 1; width: auto; }
+  #rename { margin-left: 0; }
+  .games thead { display: none; }
+  .games tbody, .games tr, .games td { display: block; }
+  .games tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .games td { padding: 0; border: 0; text-align: left; }
+  .games .code-cell { font-size: 1.2rem; }
+  .games td:nth-child(2)::before { content: '★ '; color: var(--muted); }
+  .games td:nth-child(3)::before { content: 'vs '; color: var(--muted); }
+  .games .state { grid-column: 1; }
+  .games .action { grid-column: 2; grid-row: 1 / span 4; align-self: center; }
+
+  /* match: status pinned on top while scrolling */
+  .hud {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    padding: 10px 12px;
+    clip-path: none;
+  }
+  .side strong { font-size: 0.95rem; }
+  #status { grid-column: 1 / -1; grid-row: 2; font-size: 1rem; }
+  .code { font-size: 2.4rem; }
+
+  .theater, .intel { grid-template-columns: 1fr; }
+  .board-wrap { --cell: min(calc((100vw - 32px - 1.5em) / 10), 40px); }
+
+  /* deployment: horizontal ship picker, actions in a bottom bar */
+  #deploy-col { max-width: none; }
+  #picker { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 4px; }
+  #picker li { flex: none; }
+  .pick { grid-template-columns: 52px auto auto; width: auto; padding: 0.5em 0.8em; }
+  .pick img { width: 52px !important; height: 12px; }
+
+  .deploy-actions,
+  .fire-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--panel-2);
+    border-top: 2px solid var(--amber-dim);
+  }
+  .deploy-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .deploy-actions .row { display: contents; }
+  .deploy-actions button { padding: 0.4em 0.5em; }
+  #ready { grid-column: 1 / -1; }
+  .theater:not(.battle) #own-fleet { display: none; }
+  .fire-bar { min-height: 0; }
+  body.touch #fire { min-width: 8em; min-height: 48px; font-size: 1.1rem; }
+
+  /* battle: enemy waters big and first, own fleet as a minimap beside its status */
+  .theater.battle #enemy-col { order: -1; }
+  .theater.battle #own-col { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; align-items: start; }
+  .theater.battle #own-col h3 { grid-column: 1 / -1; }
+  .theater.battle #own-col .board-wrap { --cell: calc((100vw - 48px) / 22); grid-template-columns: 1em repeat(10, var(--cell)); grid-template-rows: 1em repeat(10, var(--cell)); }
+  .theater.battle #own-col .axis { font-size: 0.5rem; }
+  .theater.battle #own-col .fleet { margin: 0; }
+  .theater.battle #enemy-fleet { grid-template-columns: 1fr 1fr; gap: 4px 16px; max-width: none; }
+  .theater.battle .fleet li { grid-template-columns: 1fr auto; gap: 6px; font-size: 0.75rem; }
+  .theater.battle .fleet img { display: none; }
+  .theater.battle .pips i { width: 7px; height: 7px; }
+  .theater.battle #own-col .cell.hit::after { inset: 25%; box-shadow: none; }
+
+  #toast { bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .dialog h2 { font-size: 2rem; }
+}
+
+/* landscape phones: little height, so trim the chrome around the boards */
+@media (max-height: 520px) and (orientation: landscape) {
+  .topbar { padding: 4px 16px; }
+  .emblem { width: 28px; height: 28px; font-size: 0.9rem; }
+  h1 { font-size: 1rem; }
+  .sub { display: none; }
+  .hazard { height: 3px; }
+  main { padding-top: 8px; }
+  #screen-room { gap: 8px; }
+  .hud { padding: 6px 12px; }
+  #status { font-size: 0.95rem; }
+  h3 { margin-bottom: 2px; }
+  .board-wrap { --cell: clamp(16px, calc((100vh - 160px) / 11), 34px); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation: none !important; transition: none !important; }
