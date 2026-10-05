@@ -5,6 +5,7 @@ const I18N = {
   en: {
     title: 'Battleship',
     subtitle: 'Naval Command',
+    credits: 'Designed and programmed by',
     commander: 'Cmdr.',
     enlistTitle: 'Identify yourself, Commander',
     enlistHint: 'Your call sign is shown to other players.',
@@ -87,6 +88,7 @@ const I18N = {
   es: {
     title: 'Batalla naval',
     subtitle: 'Comando naval',
+    credits: 'Diseñado y programado por',
     commander: 'Cmdte.',
     enlistTitle: 'Identifíquese, Comandante',
     enlistHint: 'Los demás jugadores verán tu nombre en clave.',
