@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battleship</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title"></h1>
+    <select id="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="es">Español</option>
+    </select>
+  </header>
+
+  <main>
+    <p id="status" role="status"></p>
+    <p id="notice" role="alert"></p>
+
+    <section id="lobby">
+      <button id="create" data-i18n="create"></button>
+      <form id="join-form">
+        <input id="code" maxlength="4" autocomplete="off" required data-i18n-placeholder="codePlaceholder">
+        <button data-i18n="join"></button>
+      </form>
+    </section>
+
+    <section id="waiting" hidden>
+      <p class="code" id="room-code"></p>
+      <button id="copy-link" data-i18n="copyLink"></button>
+    </section>
+
+    <section id="game" hidden>
+      <div id="place-controls">
+        <button id="rotate" data-i18n="rotate"></button>
+        <button id="reset" data-i18n="reset"></button>
+        <button id="ready" data-i18n="ready" disabled></button>
+      </div>
+      <div class="boards">
+        <figure>
+          <figcaption data-i18n="yourFleet"></figcaption>
+          <div id="own-board" class="board"></div>
+        </figure>
+        <figure id="enemy" hidden>
+          <figcaption data-i18n="enemyWaters"></figcaption>
+          <div id="enemy-board" class="board"></div>
+        </figure>
+      </div>
+    </section>
+
+    <section id="over" hidden>
+      <button id="again" data-i18n="playAgain"></button>
+    </section>
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

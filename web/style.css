@@ -1,0 +1,86 @@
+:root {
+  --bg: #f4f7fb;
+  --fg: #14213d;
+  --muted: #5c6b80;
+  --water: #cfe3f5;
+  --grid: #a9c4de;
+  --ship: #5c6b80;
+  --preview: #8fd19e;
+  --bad: #f2a3a3;
+  --hit: #e4572e;
+  --miss: #ffffff;
+  --sunk: #7a1f0f;
+  --accent: #1d6fd6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1726;
+    --fg: #e6edf6;
+    --muted: #9aa8bb;
+    --water: #16324f;
+    --grid: #24496f;
+    --ship: #8a9bb1;
+    --preview: #2f7d45;
+    --bad: #8a2f2f;
+    --miss: #3d5a78;
+    --hit: #ff7a50;
+    --sunk: #8b2a14;
+    --accent: #5aa2ff;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+
+header, main { max-width: 760px; margin: 0 auto; }
+header { display: flex; justify-content: space-between; align-items: center; }
+h1 { font-size: 1.5rem; }
+
+button, input, select { font: inherit; padding: 0.5em 0.9em; border-radius: 6px; }
+button { border: 0; background: var(--accent); color: #fff; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: default; }
+input { border: 1px solid var(--grid); text-transform: uppercase; width: 10em; }
+
+#status { font-weight: 600; min-height: 1.5em; }
+#notice { color: var(--muted); min-height: 1.5em; }
+
+#lobby, #join-form, #place-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.code { font-size: 2.5rem; font-weight: 700; letter-spacing: 0.2em; margin: 0 0 8px; }
+
+.boards { display: flex; flex-wrap: wrap; gap: 24px; }
+figure { margin: 0; }
+figcaption { color: var(--muted); margin-bottom: 4px; }
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  width: min(calc(100vw - 32px), 340px);
+}
+
+.cell {
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 3px;
+  background: var(--water);
+  outline: 1px solid var(--grid);
+  cursor: default;
+}
+
+#enemy-board.active .cell:not(.shot) { cursor: crosshair; }
+#enemy-board.active .cell:not(.shot):hover { background: var(--accent); }
+.cell.ship { background: var(--ship); }
+.cell.preview { background: var(--preview); }
+.cell.bad { background: var(--bad); }
+.cell.miss { background: var(--miss); }
+.cell.hit { background: var(--hit); }
+.cell.sunk { background: var(--sunk); }
